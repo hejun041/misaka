@@ -306,44 +306,42 @@ def start(unicom_game_info):
     print("\n")
     print("\n")  
 
-if __name__ == '__main__':
-    """读取环境变量"""
-    l = []
-    user_map = []
-    cklist = get_cookie("UNICOM_GAME_ACCOUNT_INFO")
-    for i in range(len(cklist)):
-        #以&分割开的ck
-        split1 = cklist[i].split("&")
-        split2 = cklist[i].split("\n")
-        if len(split1)>1:
-            for j in range(len(split1)):
-                user_map.append(split1[j])
-        elif len(split2)>1:
-            for j in range(len(split2)):
-                user_map.append(split2[j])
-        else:
-            user_map.append(cklist[i])
+def parse_cklist(cklist):
+    # 将 cklist 列表中的每个字符串分隔成子字符串，然后将它们添加到 user_map 列表中
+    user_map = [x for ck in cklist for x in (ck.split("&") + ck.split("\n") if "&" in ck else [ck])]
+    return user_map
 
-    
-    
-    for i in range(len(user_map)):
-        unicom_game_info=""
-        unicom_game_info = user_map[i]
-        if unicom_game_info == "":
-            print("当前账号未填写CK 跳过")
+def start_threads(user_map, interval=10):
+    print(f"user_map: {user_map}")
+    # 遍历 user_map 列表，为每个账号启动一个线程
+    threads = []
+    for i, unicom_game_info in enumerate(user_map, start=1):
+        if not unicom_game_info:
+            print("当前账号未填写 CK，跳过")
             print("\n")
             continue
-        print('开始执行第{}个账号：{}'.format((i+1),unicom_game_info.split("#")[0]))
-        p = threading.Thread(target=start,args=(unicom_game_info, ))
-        l.append(p)
+        print(f"开始执行第{i}个账号：{unicom_game_info.split('#')[0]}")
+        p = threading.Thread(target=start, args=(unicom_game_info,))
+        threads.append(p)
         p.start()
+        sleep(interval)  # 每次循环后间隔一段时间
         print("\n")
-    for i in l:
-        i.join()
-    msg_string = ""
-    if msg_str != '':
-        msg_string += "活动入口: 联通app首页-5g新通信-联通畅游\n\n"
-        msg_string += msg_str
+    return threads
 
-    send("联通畅游",msg_string)
+
+def build_msg_string(msg_str):
+    # 将多个字符串连接为单个字符串，并添加活动入口的说明
+    msg_string = "".join([msg_str, "活动入口: 联通app首页-5g新通信-联通畅游\n\n"])
+    return msg_string
+
+if __name__ == "__main__":
+    cklist = get_cookie("UNICOM_GAME_ACCOUNT_INFO")
+    user_map = parse_cklist(cklist)
+    threads = start_threads(user_map)
+    for thread in threads:
+        thread.join()
+
+    msg_string = build_msg_string(msg_str)
+    send("联通畅游", msg_string)
+
     
